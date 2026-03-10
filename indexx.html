@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yummy Mukbang Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Jua&display=swap');
+        
+        body {
+            font-family: 'Jua', sans-serif;
+            background-color: #ffe4e6;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .character-container {
+            position: relative;
+            width: 300px;
+            height: 400px;
+            margin: 0 auto;
+        }
+
+        /* Character Parts Animation */
+        .mouth {
+            transition: all 0.2s ease-in-out;
+        }
+
+        .cheeks {
+            transition: opacity 0.3s ease;
+            opacity: 0;
+        }
+
+        .eyes {
+            transition: d 0.2s ease;
+        }
+
+        /* Animation States */
+        .eating .mouth {
+            transform: scaleY(1.5) translateY(5px);
+        }
+
+        .happy .cheeks {
+            opacity: 1;
+        }
+
+        /* Floating Food Animation */
+        .food-item {
+            position: absolute;
+            font-size: 50px;
+            transition: all 0.5s cubic-bezier(0.5, -0.5, 0.5, 1.5);
+            pointer-events: none;
+            z-index: 50;
+        }
+
+        .eat-btn:active {
+            transform: scale(0.95);
+        }
+
+        .heart {
+            position: absolute;
+            color: #ff4d6d;
+            font-size: 24px;
+            pointer-events: none;
+            animation: fly-up 1s forwards;
+        }
+
+        @keyframes fly-up {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white rounded-3xl shadow-2xl p-6 w-full max-w-md text-center border-8 border-pink-200">
+        <h1 class="text-3xl text-pink-500 mb-4">냠냠! 맛있는 간식 시간</h1>
+        
+        <div class="character-container bg-blue-50 rounded-2xl border-4 border-blue-100 mb-6 flex items-center justify-center">
+            <!-- Girl Character SVG -->
+            <svg id="girl-svg" viewBox="0 0 200 250" width="100%" height="100%">
+                <!-- Hair Back -->
+                <path d="M40,100 Q40,40 100,40 Q160,40 160,100 L170,180 Q100,170 30,180 Z" fill="#4a3728" />
+                
+                <!-- Face -->
+                <circle cx="100" cy="110" r="60" fill="#ffe0bd" />
+                
+                <!-- Hair Front/Bangs -->
+                <path d="M40,100 Q100,20 160,100 Q100,80 40,100" fill="#4a3728" />
+                <path d="M40,100 L30,150 Q40,140 50,150 Z" fill="#4a3728" />
+                <path d="M160,100 L170,150 Q160,140 150,150 Z" fill="#4a3728" />
+
+                <!-- Eyes -->
+                <g class="eye-group">
+                    <circle id="left-eye" cx="75" cy="110" r="6" fill="#333" />
+                    <circle id="right-eye" cx="125" cy="110" r="6" fill="#333" />
+                </g>
+
+                <!-- Blush/Cheeks -->
+                <g class="cheeks" id="cheeks">
+                    <circle cx="60" cy="130" r="10" fill="#ffb6c1" opacity="0.6" />
+                    <circle cx="140" cy="130" r="10" fill="#ffb6c1" opacity="0.6" />
+                </g>
+
+                <!-- Mouth -->
+                <path id="mouth" class="mouth" d="M85,140 Q100,150 115,140" stroke="#333" stroke-width="3" fill="none" stroke-linecap="round" />
+                
+                <!-- Body -->
+                <path d="M60,170 L140,170 L150,230 Q100,250 50,230 Z" fill="#ff85a2" />
+                <circle cx="100" cy="190" r="5" fill="white" />
+                <circle cx="100" cy="210" r="5" fill="white" />
+            </svg>
+            <div id="food-container"></div>
+        </div>
+
+        <!-- Food Selection -->
+        <div class="flex justify-center gap-4 mb-6 overflow-x-auto py-2">
+            <button onclick="selectFood('🍩')" class="food-btn text-4xl p-2 bg-pink-50 rounded-xl border-2 border-transparent hover:border-pink-400 focus:border-pink-500 transition-all">🍩</button>
+            <button onclick="selectFood('🍕')" class="food-btn text-4xl p-2 bg-pink-50 rounded-xl border-2 border-transparent hover:border-pink-400 focus:border-pink-500 transition-all">🍕</button>
+            <button onclick="selectFood('🍦')" class="food-btn text-4xl p-2 bg-pink-50 rounded-xl border-2 border-transparent hover:border-pink-400 focus:border-pink-500 transition-all">🍦</button>
+            <button onclick="selectFood('🍰')" class="food-btn text-4xl p-2 bg-pink-50 rounded-xl border-2 border-transparent hover:border-pink-400 focus:border-pink-500 transition-all">🍰</button>
+            <button onclick="selectFood('🍔')" class="food-btn text-4xl p-2 bg-pink-50 rounded-xl border-2 border-transparent hover:border-pink-400 focus:border-pink-500 transition-all">🍔</button>
+        </div>
+
+        <!-- Action Button -->
+        <button id="eat-btn" onclick="eatAction()" class="eat-btn w-full bg-pink-500 hover:bg-pink-600 text-white text-2xl py-4 rounded-2xl shadow-lg transform transition-transform active:scale-95 font-bold">
+            냠냠 먹기!
+        </button>
+        
+        <p class="mt-4 text-pink-400 text-sm">음식을 선택하고 버튼을 눌러보세요!</p>
+    </div>
+
+    <script>
+        let currentFood = '🍩';
+        const mouth = document.getElementById('mouth');
+        const cheeks = document.getElementById('cheeks');
+        const leftEye = document.getElementById('left-eye');
+        const rightEye = document.getElementById('right-eye');
+        const foodContainer = document.getElementById('food-container');
+        const girlSvg = document.getElementById('girl-svg');
+
+        function selectFood(emoji) {
+            currentFood = emoji;
+            // Visual feedback for selection
+            const buttons = document.querySelectorAll('.food-btn');
+            buttons.forEach(btn => {
+                if(btn.innerText === emoji) {
+                    btn.classList.add('bg-pink-200');
+                } else {
+                    btn.classList.remove('bg-pink-200');
+                }
+            });
+        }
+
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.className = 'heart';
+            heart.innerText = '❤️';
+            heart.style.left = (Math.random() * 60 + 20) + '%';
+            heart.style.top = '40%';
+            document.querySelector('.character-container').appendChild(heart);
+            setTimeout(() => heart.remove(), 1000);
+        }
+
+        function eatAction() {
+            // 1. Create flying food
+            const food = document.createElement('div');
+            food.className = 'food-item';
+            food.innerText = currentFood;
+            food.style.left = '50%';
+            food.style.bottom = '20px';
+            food.style.transform = 'translateX(-50%)';
+            foodContainer.appendChild(food);
+
+            // 2. Open Mouth
+            mouth.setAttribute('d', 'M85,140 Q100,170 115,140');
+            mouth.setAttribute('fill', '#633');
+
+            // 3. Animate Food to Mouth
+            setTimeout(() => {
+                food.style.bottom = '110px';
+                food.style.opacity = '0';
+                food.style.transform = 'translateX(-50%) scale(0.5)';
+            }, 50);
+
+            // 4. Chewing and Happiness
+            setTimeout(() => {
+                food.remove();
+                
+                // Close mouth / Chewing
+                mouth.setAttribute('d', 'M85,145 Q100,145 115,145');
+                mouth.setAttribute('fill', 'none');
+                
+                // Happy Expression
+                cheeks.style.opacity = '1';
+                leftEye.setAttribute('r', '2');
+                rightEye.setAttribute('r', '2');
+                
+                // Show hearts
+                for(let i=0; i<3; i++) {
+                    setTimeout(createHeart, i * 200);
+                }
+
+                // Reset after 1.5 seconds
+                setTimeout(() => {
+                    mouth.setAttribute('d', 'M85,140 Q100,150 115,140');
+                    cheeks.style.opacity = '0';
+                    leftEye.setAttribute('r', '6');
+                    rightEye.setAttribute('r', '6');
+                }, 1500);
+
+            }, 500);
+        }
+
+        // Initialize first selection
+        selectFood('🍩');
+    </script>
+</body>
+</html>
